@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html" charset="utf-8"/>
+    <title>Babylon - Getting Started</title>
+    <!--- Link to the last version of BabylonJS --->
+    <script src="babylon.js"></script>
+    <script src="babylon.gridMaterial.js"></script>
+    <script src="babylonjs.loaders.js"></script>
+
+    <style>
+        html, body {
+            overflow: hidden;
+            width   : 100%;
+            height  : 100%;
+            margin  : 0;
+            padding : 0;
+        }
+
+        #renderCanvas {
+            width   : 100%;
+            height  : 100%;
+            touch-action: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="renderCanvas"></canvas>
+    <script>
+
+
+
+
+        //*****Guia de Problemas
+        //1 - Sem sucesso no carregamento do GLTF
+        //2 - Mouse, com scroll muito rápido
+        //3 - Quando da o mouse picker com o botão direito, ele seleciona o objeto
+        //4 - Quando coloco a câmera no "chão" e movo com o direito para baixo, ela atravessa o chão
+        window.addEventListener('DOMContentLoaded', function(){
+            // get the canvas DOM element
+            var canvas = document.getElementById('renderCanvas');
+
+            // load the 3D engine
+            var engine = new BABYLON.Engine(canvas, true);
+
+            // createScene function that creates and return the scene
+
+
+
+            var createScene = function(){
+                // create a basic BJS Scene object
+                    var scene = new BABYLON.Scene(engine);
+                    //var camera = new BABYLON.ArcRotateCamera("Camera", -Math.PI / 50, Math.PI /1, 10, BABYLON.Vector3.Zero(), scene);
+                    var camera = new BABYLON.ArcRotateCamera("Camera", 2, 2, 100, BABYLON.Vector3.Zero(), scene);
+                    camera.attachControl(canvas, true);
+                    
+                
+                    camera.lowerBetaLimit = 0.1;
+                    camera.upperBetaLimit = (Math.PI / 2) * 0.99;
+                    camera.lowerRadiusLimit = 0.1;
+
+                    scene.clearColor = new BABYLON.Color3(	211, 211, 211);
+
+                    var light = new BABYLON.PointLight("pointLight", new BABYLON.Vector3(1, 10, 1), scene);
+                
+                
+                    BABYLON.SceneLoader.Append("./", "mesaTeste.obj", scene, function (newMeshes) {
+                    
+                     scene.createDefaultCameraOrLight(true);
+                     scene.activeCamera.attachControl(canvas, false); 
+                                      
+                 });
+                    /*BABYLON.SceneLoader.Append("/scenes/", "untitled.gltf", scene, function (scene) {
+                    // Create a default arc rotate camera and light.
+                    scene.createDefaultCameraOrLight(true, true, true);
+
+                    // The default camera looks at the back of the asset.
+                    // Rotate the camera by 180 degrees to the front of the asset.
+                    scene.activeCamera.alpha += Math.PI;
+                });*/
+
+                    var sphere = BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 2, segments: 32}, scene);
+            
+
+                
+                   
+
+                    // Ground
+                    groundMaterial = new BABYLON.GridMaterial("groundMaterial", scene);
+                    groundMaterial.majorUnitFrequency = 5;
+                    groundMaterial.minorUnitVisibility = 0.45;
+                    groundMaterial.gridRatio = 2;
+                    groundMaterial.backFaceCulling = false;
+                    groundMaterial.mainColor = new BABYLON.Color3(0, 0, 0);
+                    groundMaterial.lineColor = new BABYLON.Color3(1.0, 1.0, 1.0);
+                    groundMaterial.opacity = 0.98;
+                
+
+                    var ground = BABYLON.MeshBuilder.CreateGround("ground",{height: 10000, width: 10000, subdivisions: 0},scene); //default ground
+                    ground.material=groundMaterial;
+                    ground.isPickable = false ; //define se o chão é ou não "pegável"
+                   
+
+
+
+
+                    var gizmoManager = new BABYLON.GizmoManager(scene)
+
+                   
+
+                var currentMesh;
+                var oldMesh;
+                var aux4 = 0;
+
+
+                scene.onPointerDown = function (evt, pickResult) {
+                    
+        // if the click hits the ground object, we change the impact position
+                    if (pickResult.hit) {
+                    if (evt.button !== 0) {
+                      return;
+                     }
+
+                    var pickInfo = scene.pick(scene.pointerX, scene.pointerY, function (mesh) { return mesh !== ground; });
+
+                    
+                    if (pickInfo.hit) {
+
+                        currentMesh = pickInfo.pickedMesh;
+                        if (aux4 == 0){
+                            oldMesh = currentMesh;
+                             aux4 = 1;
+                        }
+                        console.log("Old ",oldMesh);
+                        console.log("Current ",currentMesh);
+
+                        if (oldMesh == currentMesh){
+
+                            oldMesh = currentMesh;
+                            currentMesh.showBoundingBox = true;  
+                                scene.getBoundingBoxRenderer().frontColor = BABYLON.Color3.Red();
+                                gizmoManager.positionGizmoEnabled = true;
+                                gizmoManager.rotationGizmoEnabled = false;
+                                aux=1;
+                               
+                                }else{
+                                    
+                                    currentMesh.showBoundingBox = true;  
+                                    scene.getBoundingBoxRenderer().frontColor = BABYLON.Color3.Red();
+                                    gizmoManager.positionGizmoEnabled = true;
+                                    gizmoManager.rotationGizmoEnabled = false;
+                                    aux = 1;
+                                   
+                                    oldMesh.showBoundingBox = false;
+                                    oldMesh = currentMesh;
+                                   // oldMesh = currentMesh;
+                                    
+                        }
+                     }
+                        
+                    }
+                };
+
+              var  aux = 0;//A lógica do aux = 0 funciona assim: no babylon, caso o tranlate esteja acionado, e eu tente dar o increase, ele aceita
+              //porém, na hora do decrease, o rotate estiver na linha de código, é apresentado um erro. Assim, quando aperto o w, e posterior o increase
+              // e depois quero resetar, através do aux, é autorizado apenas o decrease do position. E caso eu clique para rotacionar, a lógica é a mesma. 
+
+                document.onkeydown = (e)=>{
+                if(e.key == 'w' ||  e.key == 'r'){
+                    // Switch gizmo type
+                  
+                    gizmoManager.rotationGizmoEnabled = false;
+
+                    if(e.key == 'w'){
+                        gizmoManager.positionGizmoEnabled = true;
+                         
+                         
+                    }
+                    if(e.key == 'r'){
+                        gizmoManager.rotationGizmoEnabled = true;
+                        gizmoManager.positionGizmoEnabled = false;
+                        aux = 2;
+                    }
+
+                }
+                if(e.key == 'Escape'){
+                    // hide the gizmo
+                    gizmoManager.attachToMesh(null);
+                    for (var i = 0; i < scene.meshes.length; i++) {
+                    if (scene.meshes[i].showBoundingBox) {
+                            scene.meshes[i].showBoundingBox = false;
+                        }
+                    }
+                    if(aux == 1)gizmoManager.gizmos.positionGizmo.scaleRatio = (1);
+                    if(aux == 2)gizmoManager.gizmos.rotationGizmo.scaleRatio = (1);
+                    if(aux == 1)gizmoManager.gizmos.positionGizmo.snapDistance = 0;
+                    if(aux == 2)gizmoManager.gizmos.rotationGizmo.snapDistance = 0;
+
+                }
+                if(e.key == 'a'){
+                    // Toggle local/global gizmo rotation positioning
+                    gizmoManager.gizmos.positionGizmo.updateGizmoRotationToMatchAttachedMesh = !gizmoManager.gizmos.positionGizmo.updateGizmoRotationToMatchAttachedMesh;
+                    gizmoManager.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh = !gizmoManager.gizmos.rotationGizmo.updateGizmoRotationToMatchAttachedMesh;
+                }
+                if(e.key == 's'){
+                    // Toggle distance snapping
+                   if(aux == 1)gizmoManager.gizmos.positionGizmo.snapDistance = 0.25;
+
+                   if(aux == 2)gizmoManager.gizmos.rotationGizmo.snapDistance = 0.43;// Tem que configurar para que o objeto mova-se apenas de 45 em 45 graus
+
+                }
+                if(e.key == 'i'){                     
+                    if(aux == 1){
+                        gizmoManager.gizmos.positionGizmo.scaleRatio = 3;
+                    }
+                    if(aux == 2){
+                        gizmoManager.gizmos.rotationGizmo.scaleRatio = 3;
+                    }
+                }
+                
+                if(e.key == 'd'){                     
+                    if(aux == 1)gizmoManager.gizmos.positionGizmo.scaleRatio = (1);
+                    if(aux == 2)gizmoManager.gizmos.rotationGizmo.scaleRatio = (1);
+                }
+            }
+                
+
+                // return the created scene
+                return scene;
+            }
+
+         
+
+
+
+
+
+
+
+            // call the createScene function
+            var scene = createScene();
+
+            // run the render loop
+            engine.runRenderLoop(function(){
+                scene.render();
+            });
+
+            // the canvas/window resize event handler
+            window.addEventListener('resize', function(){
+                engine.resize();
+            });
+        });
+    </script>
+</body>
+</html>
